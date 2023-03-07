@@ -455,16 +455,18 @@ class Window(pyglet.window.Window):
             x, y = x + dx * m, y + dy * m
             y = max(-90, min(90, y)) # 限制仰视和俯视角y只能在-90度和90度之间
             self.rotation = (x, y)
+
     # 按下键盘事件，长按W，S，A，D键将不断改变坐标
     def on_key_press(self, symbol, modifiers):
+        # print('press', symbol)
         if symbol == key.W: # opengl坐标系：z轴垂直平面向外，x轴向右，y轴向上
-            self.strafe[0] -= 1 # 向前：z坐标-1
+            self.strafe[0] = -1 # 向前：z坐标-1
         elif symbol == key.S:
-            self.strafe[0] += 1
+            self.strafe[0] = 1
         elif symbol == key.A: # 向左：x坐标-1
-            self.strafe[1] -= 1
+            self.strafe[1] = -1
         elif symbol == key.D:
-            self.strafe[1] += 1
+            self.strafe[1] = 1
         elif symbol == key.SPACE:
             if self.dy == 0:
                 self.dy = 0.015 # jump speed
@@ -475,16 +477,19 @@ class Window(pyglet.window.Window):
         elif symbol in self.num_keys: 
             index = (symbol - self.num_keys[0]) % len(self.inventory) # 0,1,2
             self.block = self.inventory[index] # 取得相应的方块类型
+
     # 释放按键事件
     def on_key_release(self, symbol, modifiers):
+        # print('release', symbol)
         if symbol == key.W: # 按键释放时，各方向退回一个单位
-            self.strafe[0] += 1
+            self.strafe[0] = 0
         elif symbol == key.S:
-            self.strafe[0] -= 1
+            self.strafe[0] = 0
         elif symbol == key.A:
-            self.strafe[1] += 1
+            self.strafe[1] = 0
         elif symbol == key.D:
-            self.strafe[1] -= 1
+            self.strafe[1] = 0
+
     # 窗口大小变化响应事件
     def on_resize(self, width, height):
         # label的纵坐标
@@ -497,6 +502,7 @@ class Window(pyglet.window.Window):
         self.reticle = pyglet.graphics.vertex_list(4,
             ('v2i', (x - n, y, x + n, y, x, y - n, x, y + n))
         )
+
     def set_2d(self):
         width, height = self.get_size()
         glDisable(GL_DEPTH_TEST)
