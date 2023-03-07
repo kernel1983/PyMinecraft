@@ -10,21 +10,16 @@
 
 http://www.youtube.com/watch?v=kC3lwK631X8
 
+## Update
+
+Python 3.8+ 支持
+
 ## How to Run
 
-    pip install pyglet
+    pip install pyglet==1.5.27
     git clone https://github.com/Hawstein/PyMinecraft.git
     cd PyMinecraft
     python main.py
-
-在windows和mac下，pyglet还不支持64 python，对于64 mac，可以试一下：
-
-	export VERSIONER_PYTHON_PREFER_32_BIT=yes
-    arch -i386 python main.py
-	
-或者使用支持64位的Pyglet 1.2：
-
-	pip install https://pyglet.googlecode.com/files/pyglet-1.2alpha1.tar.gz 
 	
 ## How to Play
 
