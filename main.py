@@ -98,6 +98,7 @@ class Model(object):
         self.sectors = {} # 字典：(x,0,z):[position1,position2...]键值对
         self.queue = [] # 用于存储事件的队列
         self.initialize() # 画出游戏地图
+
     # 画地图，大小80*80
     def initialize(self):
         n = 80 # 地图大小
@@ -132,6 +133,7 @@ class Model(object):
                             continue
                         self.init_block((x, y, z), t)
                 s -= d
+
     # 检测鼠标是否能对一个立方体进行操作。
     # 返回key,previous：key是鼠标可操作的块(中心坐标)，根据人所在位置和方向向量求出，
     # previous是与key处立方体相邻的空位置的中心坐标。
@@ -145,10 +147,12 @@ class Model(object):
         for _ in range(max_distance * m): # 迭代8*8=64次
             key = normalize((x, y, z))
             if key != previous and key in self.world:
+                # print(key, previous)
                 return key, previous
             previous = key
             x, y, z = x + dx / m, y + dy / m, z + dz / m
         return None, None
+
     # 只要position周围6个面有一个没有立方体(exposed了)，返回真值，表示要绘制position处的立方体
     # 如果6个面都被立方体包围(没有exposed)，position处的立方体就可以不绘制
     # 因为绘制了也看不到
@@ -158,10 +162,12 @@ class Model(object):
             if (x + dx, y + dy, z + dz) not in self.world:
                 return True
         return False
+
     # 初始化地图时调用它，但不会同步地绘制出来sync=false
     # 而是全部添加完一次性绘制
     def init_block(self, position, texture):
         self.add_block(position, texture, False)
+
     # 添加立方体
     def add_block(self, position, texture, sync=True):
         if position in self.world: # 如果position已经存在于world中，要先移除它
@@ -174,6 +180,7 @@ class Model(object):
             if self.exposed(position): # 如果同步绘制，且该位置是显露在外的
                 self.show_block(position) # 绘制该立方体
             self.check_neighbors(position)
+
     # 删除立方体
     def remove_block(self, position, sync=True):
         del self.world[position] # 把world中的position,texture对删除
@@ -182,6 +189,7 @@ class Model(object):
             if position in self.shown: # 如果position在显示列表中
                 self.hide_block(position) # 立即删除它
             self.check_neighbors(position)
+
     # 删除一个立方体后，要检查它周围6个邻接的位置
     # 是否有因此暴露出来的立方体，有的话要把它绘制出来
     def check_neighbors(self, position):
@@ -194,13 +202,15 @@ class Model(object):
                 if key not in self.shown: # 且没有在显示列表中
                     self.show_block(key) # 则立即绘制出来
             else: # 如果没有暴露在外，而又在显示列表中，则立即隐藏(删除)它
-                if key in self.shown: 
+                if key in self.shown:
                     self.hide_block(key)
+
     # 将world中还没显示且显露在外的立方体绘制出来
     def show_blocks(self):
         for position in self.world:
             if position not in self.shown and self.exposed(position):
                 self.show_block(position)
+
     # 显示立方体
     def show_block(self, position, immediate=True):
         texture = self.world[position] # 取出纹理(其实是6个面的纹理坐标信息)
@@ -209,6 +219,7 @@ class Model(object):
             self._show_block(position, texture)
         else: # 不立即绘制，进入事件队列
             self.enqueue(self._show_block, position, texture)
+
     # 添加顶点列表(VertexList)到渲染对象，(on_draw会指渲染它)
     # 并将position:VertexList对存入_shown
     def _show_block(self, position, texture):
@@ -236,6 +247,7 @@ class Model(object):
         self._shown[position] = self.batch.add(count, GL_QUADS, self.group, 
             ('v3f/static', vertex_data),
             ('t2f/static', texture_data))
+
     # 隐藏立方体
     def hide_block(self, position, immediate=True):
         self.shown.pop(position) # 将要隐藏的立方体中心坐标从显示列表中移除
@@ -243,16 +255,19 @@ class Model(object):
             self._hide_block(position)
         else: # 不立即移除，进行事件队列等待处理
             self.enqueue(self._hide_block, position)
+
     # 立即移除立方体
     # 将position位置的顶点列表弹出并删除，相应的立方体立即被移除(其实是在update之后)
     def _hide_block(self, position):
         self._shown.pop(position).delete()
+
     # 绘制一个区域内的立方体
     # 如果区域内的立方体位置没在显示列表，且位置是显露在外的，则显示立方体
     def show_sector(self, sector):
         for position in self.sectors.get(sector, []):
             if position not in self.shown and self.exposed(position):
                 self.show_block(position, False) # 放入队列，并不立即绘制
+
     # 隐藏区域
     # 如果一个立方体是在显示列表中的，则隐藏它，
     def hide_sector(self, sector):
@@ -281,19 +296,23 @@ class Model(object):
             self.show_sector(sector)
         for sector in hide:
             self.hide_sector(sector)
+
     # 添加事件到队列queue
     def enqueue(self, func, *args):
         self.queue.append((func, args))
+
     # 处理队头事件
     def dequeue(self):
         func, args = self.queue.pop(0)
         func(*args)
+
     # 用1/60秒的时间来处理队列中的事件
     # 不一定要处理完
     def process_queue(self):
         start = time.perf_counter()
         while self.queue and time.perf_counter() - start < 1 / 60.0:
             self.dequeue()
+
     # 处理事件队列中的所有事件
     def process_entire_queue(self):
         while self.queue:
@@ -329,10 +348,12 @@ class Window(pyglet.window.Window):
             x=10, y=self.height - 10, anchor_x='left', anchor_y='top', 
             color=(0, 0, 0, 255))
         pyglet.clock.schedule_interval(self.update, 1.0 / 60)# 每秒刷新60次
+
     # 设置鼠标事件是否绑定到游戏窗口
     def set_exclusive_mouse(self, exclusive):
         super(Window, self).set_exclusive_mouse(exclusive)
         self.exclusive = exclusive
+
     # 根据前进方向rotation来决定移动1单位距离时，各轴分量移动多少
     def get_sight_vector(self):
         x, y = self.rotation
@@ -341,8 +362,10 @@ class Window(pyglet.window.Window):
         dx = math.cos(math.radians(x - 90)) * m # sin(x)cos(y)
         dz = math.sin(math.radians(x - 90)) * m # -cos(x)cos(y)
         return (dx, dy, dz)
+
     # 运动时计算三个轴的位移增量
     def get_motion_vector(self):
+        # print(self.strafe)
         if any(self.strafe): # 只要strafe中有一项为真(不为0)，就执行:
             x, y = self.rotation
             strafe = math.degrees(math.atan2(*self.strafe)) # arctan(z/x)，再转换成角度
@@ -365,6 +388,7 @@ class Window(pyglet.window.Window):
             dx = 0.0
             dz = 0.0
         return (dx, dy, dz)
+
     # 每1/60秒调用一次进行更新
     def update(self, dt):
         self.model.process_queue() # 用1/60的时间来处理队列中的事件，不一定要处理完
@@ -378,6 +402,7 @@ class Window(pyglet.window.Window):
         dt = min(dt, 0.2)
         for _ in range(m):
             self._update(dt / m)
+
     # 更新self.dy和self.position
     def _update(self, dt):
         # walking
@@ -395,6 +420,7 @@ class Window(pyglet.window.Window):
         # 碰撞检测后应该移动到的位置
         x, y, z = self.collide((x + dx, y + dy, z + dz), 2) 
         self.position = (x, y, z) # 更新位置
+
     # 碰撞检测
     # 返回的p是碰撞检测后应该移动到的位置
     # 如果没有遇到障碍物，p仍然是position；
@@ -422,6 +448,7 @@ class Window(pyglet.window.Window):
                         self.dy = 0
                     break
         return tuple(p)
+
     # 第一句直接return，所以此函数不做任何事
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         return
@@ -429,6 +456,7 @@ class Window(pyglet.window.Window):
         dx, dy, dz = self.get_sight_vector()
         d = scroll_y * 10
         self.position = (x + dx * d, y + dy * d, z + dz * d)
+
     # 鼠标按下事件
     def on_mouse_press(self, x, y, button, modifiers):
         if self.exclusive: # 当鼠标事件已经绑定了此窗口
@@ -444,6 +472,7 @@ class Window(pyglet.window.Window):
                     self.model.add_block(previous, self.block)
         else: # 否则隐藏鼠标，并绑定鼠标事件到该窗口
             self.set_exclusive_mouse(True)
+
     # 鼠标移动事件，处理视角的变化
     # dx,dy表示鼠标从上一位置移动到当前位置x，y轴上的位移
     # 该函数将这个位移转换成了水平角x和俯仰角y的变化
@@ -512,6 +541,7 @@ class Window(pyglet.window.Window):
         glOrtho(0, width, 0, height, -1, 1)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
+
     def set_3d(self):
         width, height = self.get_size()
         glEnable(GL_DEPTH_TEST)
@@ -526,6 +556,7 @@ class Window(pyglet.window.Window):
         glRotatef(-y, math.cos(math.radians(x)), 0, math.sin(math.radians(x)))
         x, y, z = self.position
         glTranslatef(-x, -y, -z)
+
     # 重写Window的on_draw函数
     # 当窗口需要被重绘时，事件循环(EventLoop)就会调度该事件
     def on_draw(self):
@@ -537,10 +568,13 @@ class Window(pyglet.window.Window):
         self.set_2d() # 进入2d模式
         self.draw_label() # 绘制label
         self.draw_reticle() # 绘制窗口中间的十字
+
     # 画出鼠标focus的立方体，在它的外层画个立方体线框
     def draw_focused_block(self):
         vector = self.get_sight_vector()
+        # print(self.position, vector)
         block = self.model.hit_test(self.position, vector)[0]
+        # print(block)
         if block:
             x, y, z = block
             vertex_data = cube_vertices(x, y, z, 0.51)
@@ -548,12 +582,15 @@ class Window(pyglet.window.Window):
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
             pyglet.graphics.draw(24, GL_QUADS, ('v3f/static', vertex_data))
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
     def draw_label(self): # 显示帧率，当前位置坐标，显示的方块数及总共的方块数
         x, y, z = self.position
         self.label.text = '%02d (%.2f, %.2f, %.2f) %d / %d' % (
             pyglet.clock.get_fps(), x, y, z, 
             len(self.model._shown), len(self.model.world))
         self.label.draw() # 绘制label的text
+        # print(pyglet.clock.get_fps())
+
     # 绘制游戏窗口中间的十字，一条横线加一条竖线
     def draw_reticle(self):
         glColor3d(0, 0, 1)
