@@ -108,7 +108,7 @@ class Model(object):
             for z in range(-n, n + 1, s):
                 # 在地下画一层石头，上面是一层草地
                 # 地面从y=-2开始
-                self.init_block((x, y - 2, z), GRASS)
+                # self.init_block((x, y - 2, z), GRASS)
                 self.init_block((x, y - 3, z), STONE)
                 # 地图的四周用墙围起来
                 if x in (-n, n) or z in (-n, n):
@@ -116,23 +116,23 @@ class Model(object):
                         self.init_block((x, y + dy, z), STONE)
         o = n - 10 # 为了避免建到墙上，o取n-10
         # 在地面上随机建造一些草块，沙块，砖块
-        for _ in range(120): # 只想迭代120次，不需要迭代变量i，直接用 _
-            a = random.randint(-o, o) # 在[-o,o]内随机取一个整数
-            b = random.randint(-o, o)
-            c = -1
-            h = random.randint(1, 6)
-            s = random.randint(4, 8)
-            d = 1
-            t = random.choice([GRASS, SAND, BRICK]) # 随机选择一个纹理
-            for y in range(c, c + h):
-                for x in range(a - s, a + s + 1):
-                    for z in range(b - s, b + s + 1):
-                        if (x - a) ** 2 + (z - b) ** 2 > (s + 1) ** 2:
-                            continue
-                        if (x - 0) ** 2 + (z - 0) ** 2 < 5 ** 2:
-                            continue
-                        self.init_block((x, y, z), t)
-                s -= d
+        # for _ in range(120): # 只想迭代120次，不需要迭代变量i，直接用 _
+        #     a = random.randint(-o, o) # 在[-o,o]内随机取一个整数
+        #     b = random.randint(-o, o)
+        #     c = -1
+        #     h = random.randint(1, 6)
+        #     s = random.randint(4, 8)
+        #     d = 1
+        #     t = random.choice([GRASS, SAND, BRICK]) # 随机选择一个纹理
+        #     for y in range(c, c + h):
+        #         for x in range(a - s, a + s + 1):
+        #             for z in range(b - s, b + s + 1):
+        #                 if (x - a) ** 2 + (z - b) ** 2 > (s + 1) ** 2:
+        #                     continue
+        #                 if (x - 0) ** 2 + (z - 0) ** 2 < 5 ** 2:
+        #                     continue
+        #                 self.init_block((x, y, z), t)
+        #         s -= d
 
     # 检测鼠标是否能对一个立方体进行操作。
     # 返回key,previous：key是鼠标可操作的块(中心坐标)，根据人所在位置和方向向量求出，
@@ -324,14 +324,17 @@ class Window(pyglet.window.Window):
         # **kwargs,化字典为关键字参数：{'a':1,'b':2} -> func(a=1,b=2)
         super(Window, self).__init__(*args, **kwargs)
         self.exclusive = False # 初始时，鼠标事件没有绑定到游戏窗口
-        self.flying = False
+        self.flying = True
         self.strafe = [0, 0] # [z, x]，z表示前后运动，x表示左右运动
-        self.position = (0, 0, 0) # 开始位置在地图中间
+        self.target = [0, -2, 0] # 开始位置在地图中间
+        self.position = [-3, 3, 3] # 开始位置在地图中间
+        self.angles = [[-3, 5, 3], [-3, 5, -3], [3, 5, -3], [3, 5, 3]]
+        self.angle_index = 0
         # rotation(水平角x，俯仰角y)
         # 水平角是方向射线xoz上的投影与z轴负半轴的夹角
         # 俯仰角是方向射线与xoz平面的夹角
-        self.rotation = (0, 0)
-        # 
+        self.rotation = [45, -45]
+
         self.sector = None
         # reticle表示游戏窗口中间的那个十字
         # 四个点，绘制成两条直线
@@ -419,7 +422,7 @@ class Window(pyglet.window.Window):
         x, y, z = self.position
         # 碰撞检测后应该移动到的位置
         x, y, z = self.collide((x + dx, y + dy, z + dz), 2) 
-        self.position = (x, y, z) # 更新位置
+        self.position = [x, y, z] # 更新位置
 
     # 碰撞检测
     # 返回的p是碰撞检测后应该移动到的位置
@@ -459,6 +462,8 @@ class Window(pyglet.window.Window):
 
     # 鼠标按下事件
     def on_mouse_press(self, x, y, button, modifiers):
+        return
+
         if self.exclusive: # 当鼠标事件已经绑定了此窗口
             vector = self.get_sight_vector()
             block, previous = self.model.hit_test(self.position, vector)
@@ -478,6 +483,8 @@ class Window(pyglet.window.Window):
     # 该函数将这个位移转换成了水平角x和俯仰角y的变化
     # 变化幅度由参数m控制
     def on_mouse_motion(self, x, y, dx, dy):
+        return
+
         if self.exclusive:  # 在鼠标绑定在该窗口时
             m = 0.15
             x, y = self.rotation
@@ -488,21 +495,22 @@ class Window(pyglet.window.Window):
     # 按下键盘事件，长按W，S，A，D键将不断改变坐标
     def on_key_press(self, symbol, modifiers):
         # print('press', symbol)
-        if symbol == key.W: # opengl坐标系：z轴垂直平面向外，x轴向右，y轴向上
-            self.strafe[0] = -1 # 向前：z坐标-1
-        elif symbol == key.S:
-            self.strafe[0] = 1
-        elif symbol == key.A: # 向左：x坐标-1
-            self.strafe[1] = -1
-        elif symbol == key.D:
-            self.strafe[1] = 1
-        elif symbol == key.SPACE:
-            if self.dy == 0:
-                self.dy = 0.015 # jump speed
+        # if symbol == key.W: # opengl坐标系：z轴垂直平面向外，x轴向右，y轴向上
+        #     self.strafe[0] = -1 # 向前：z坐标-1
+        # elif symbol == key.S:
+        #     self.strafe[0] = 1
+        # elif symbol == key.A: # 向左：x坐标-1
+        #     self.strafe[1] = -1
+        # elif symbol == key.D:
+        #     self.strafe[1] = 1
+        if symbol == key.SPACE:
+            # if self.dy == 0:
+            #     self.dy = 0.015 # jump speed
+            self.model.add_block(tuple(self.target), self.block)
         elif symbol == key.ESCAPE: # 鼠标退出当前窗口
             self.set_exclusive_mouse(False)
-        elif symbol == key.TAB: # 切换是否能飞，即是否可以在垂直方向y上运动
-            self.flying = not self.flying
+        # elif symbol == key.TAB: # 切换是否能飞，即是否可以在垂直方向y上运动
+        #     self.flying = not self.flying
         elif symbol in self.num_keys: 
             index = (symbol - self.num_keys[0]) % len(self.inventory) # 0,1,2
             self.block = self.inventory[index] # 取得相应的方块类型
@@ -511,13 +519,39 @@ class Window(pyglet.window.Window):
     def on_key_release(self, symbol, modifiers):
         # print('release', symbol)
         if symbol == key.W: # 按键释放时，各方向退回一个单位
-            self.strafe[0] = 0
+            # self.strafe[0] = 0
+            self.target[0] += 1
+            self.position[0] += 1
         elif symbol == key.S:
-            self.strafe[0] = 0
+            # self.strafe[0] = 0
+            self.target[0] -= 1
+            self.position[0] -= 1
         elif symbol == key.A:
-            self.strafe[1] = 0
+            # self.strafe[1] = 0
+            self.target[2] -= 1
+            self.position[2] -= 1
         elif symbol == key.D:
-            self.strafe[1] = 0
+            # self.strafe[1] = 0
+            self.target[2] += 1
+            self.position[2] += 1
+        elif symbol == key.UP:
+            self.target[1] += 1
+            self.position[1] += 1
+        elif symbol == key.DOWN:
+            self.target[1] -= 1
+            self.position[1] -= 1
+        elif symbol == key.LEFT:
+            self.angle_index = (self.angle_index+1) % 4
+            self.rotation = (90*self.angle_index+45, -45)
+            self.position[0] = self.target[0] + self.angles[self.angle_index][0]
+            self.position[1] = self.target[1] + self.angles[self.angle_index][1]
+            self.position[2] = self.target[2] + self.angles[self.angle_index][2]
+        elif symbol == key.RIGHT:
+            self.angle_index = (self.angle_index+3) % 4
+            self.rotation = (90*self.angle_index+45, -45)
+            self.position[0] = self.target[0] + self.angles[self.angle_index][0]
+            self.position[1] = self.target[1] + self.angles[self.angle_index][1]
+            self.position[2] = self.target[2] + self.angles[self.angle_index][2]
 
     # 窗口大小变化响应事件
     def on_resize(self, width, height):
@@ -571,28 +605,31 @@ class Window(pyglet.window.Window):
 
     # 画出鼠标focus的立方体，在它的外层画个立方体线框
     def draw_focused_block(self):
-        vector = self.get_sight_vector()
+        # vector = self.get_sight_vector()
         # print(self.position, vector)
-        block = self.model.hit_test(self.position, vector)[0]
+        # block = self.model.hit_test(self.position, vector)[0]
         # print(block)
-        if block:
-            x, y, z = block
-            vertex_data = cube_vertices(x, y, z, 0.51)
-            glColor3d(0, 0, 0)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            pyglet.graphics.draw(24, GL_QUADS, ('v3f/static', vertex_data))
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        # if block:
+        #     x, y, z = block
+        x, y, z = self.target
+        vertex_data = cube_vertices(x, y, z, 0.51)
+        glColor3d(0, 0, 0)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        pyglet.graphics.draw(24, GL_QUADS, ('v3f/static', vertex_data))
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
     def draw_label(self): # 显示帧率，当前位置坐标，显示的方块数及总共的方块数
-        x, y, z = self.position
-        self.label.text = '%02d (%.2f, %.2f, %.2f) %d / %d' % (
-            pyglet.clock.get_fps(), x, y, z, 
+        x, y, z = self.target
+        self.label.text = '(%.2f, %.2f, %.2f) %d / %d' % (
+            x, y, z, 
             len(self.model._shown), len(self.model.world))
         self.label.draw() # 绘制label的text
         # print(pyglet.clock.get_fps())
 
     # 绘制游戏窗口中间的十字，一条横线加一条竖线
     def draw_reticle(self):
+        return
+
         glColor3d(0, 0, 1)
         self.reticle.draw(GL_LINES)
 
